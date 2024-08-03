@@ -47,20 +47,45 @@ def get_most_relevant_article(query):
     most_relevant_idx = np.argmax(similarities)
     return news_df.iloc[most_relevant_idx]
 
+# Function to chat with GPT-4
+def chat_with_gpt4(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant providing information about the aluminium industry and general conversation."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message['content']
+    except Exception as e:
+        return f"Error with GPT-4: {e}"
+
+# Function to check if the query is related to news
+def is_news_related(text):
+    keywords = ["news", "latest", "update", "industry", "aluminium"]
+    return any(keyword in text.lower() for keyword in keywords)
+
 # Display chat messages
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
 # Input box for user prompt
-if prompt := st.chat_input("Ask me about the latest news in the aluminum industry:"):
+if prompt := st.chat_input("Ask me about the latest news in the aluminum industry or just chat!"):
     # Add user message to session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
     
     try:
-        # Get the most relevant article
-        article = get_most_relevant_article(prompt)
-        response_message = f"**Title:** {article['title']}\n\n**Summary:** {article['summary']}\n\n**Date:** {article['date']}"
+        if is_news_related(prompt):
+            # Get the most relevant article
+            article = get_most_relevant_article(prompt)
+            article_summary = f"**Title:** {article['title']}\n\n**Summary:** {article['summary']}\n\n**Date:** {article['date']}"
+            
+            response_message = f"**Relevant Article:**\n\n{article_summary}"
+        else:
+            # Generate a response using GPT-4 for general queries
+            response_message = chat_with_gpt4(prompt)
     except Exception as e:
         response_message = f"Error: {str(e)}"
 
